@@ -55,3 +55,8 @@ pnpm-debug.log*
 
 # Test coverage
 coverage/
+
+
+.env
+config/firebase-service-account.json
+node_modules/

@@ -1,28 +1,11 @@
 import admin from 'firebase-admin';
 
-const initializeFirebase = () => {
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL
-      })
-    });
-  }
-};
-
-export const verifyToken = async (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
   try {
-    initializeFirebase();
-    
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access denied. No token provided.'
-      });
+      return res.status(401).json({ message: 'No token provided' });
     }
 
     const token = authHeader.split(' ')[1];
@@ -32,28 +15,16 @@ export const verifyToken = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid or expired token.'
-    });
-  }
-};
-
-export const optionalAuth = async (req, res, next) => {
-  try {
-    initializeFirebase();
+    console.error('Auth error:', error.message);
     
-    const authHeader = req.headers.authorization;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      req.user = decodedToken;
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ message: 'Token expired' });
     }
     
-    next();
-  } catch (error) {
-    next();
+    if (error.code === 'auth/id-token-revoked') {
+      return res.status(401).json({ message: 'Token revoked' });
+    }
+    
+    res.status(401).json({ message: 'Invalid token' });
   }
 };
