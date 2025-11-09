@@ -1,41 +1,59 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import AppError from '../utils/constants.js';
+import admin from 'firebase-admin';
 
-export const protect = async (req, res, next) => {
-  try {
-    let token;
-
-    // Check for token in header
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (!token) {
-      return next(new AppError('Not authorized to access this route', 401));
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Get user from token
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      return next(new AppError('User no longer exists', 401));
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    return next(new AppError('Not authorized to access this route', 401));
+const initializeFirebase = () => {
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL
+      })
+    });
   }
 };
 
-export const authorize = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return next(new AppError('Not authorized to access this route', 403));
+export const verifyToken = async (req, res, next) => {
+  try {
+    initializeFirebase();
+    
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      });
     }
+
+    const token = authHeader.split(' ')[1];
+    
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    req.user = decodedToken;
+    
     next();
-  };
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired token.'
+    });
+  }
+};
+
+export const optionalAuth = async (req, res, next) => {
+  try {
+    initializeFirebase();
+    
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      req.user = decodedToken;
+    }
+    
+    next();
+  } catch (error) {
+    next();
+  }
 };
