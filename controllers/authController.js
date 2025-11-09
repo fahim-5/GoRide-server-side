@@ -1,91 +1,120 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import AppError from '../utils/appError.js';
+import admin from 'firebase-admin';
+import { User } from '../models/index.js';
 
-// Generate JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '30d'
-  });
-};
-
-// Send token response
-const sendTokenResponse = (user, statusCode, res) => {
-  const token = generateToken(user._id);
-
-  res.status(statusCode).json({
-    success: true,
-    token,
-    data: {
-      user
-    }
-  });
-};
-
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
-export const register = async (req, res, next) => {
+const verifyToken = async (token) => {
   try {
-    const { name, email, password } = req.body;
-
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return next(new AppError('User already exists with this email', 400));
-    }
-
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password
-    });
-
-    sendTokenResponse(user, 201, res);
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    return decodedToken;
   } catch (error) {
-    next(error);
+    throw new Error('Invalid token');
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
-export const login = async (req, res, next) => {
+export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    // Check if email and password exist
-    if (!email || !password) {
-      return next(new AppError('Please provide email and password', 400));
-    }
-
-    // Check if user exists and password is correct
-    const user = await User.findOne({ email }).select('+password');
-    if (!user || !(await user.comparePassword(password))) {
-      return next(new AppError('Invalid email or password', 401));
-    }
-
-    sendTokenResponse(user, 200, res);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get current user
-// @route   GET /api/auth/me
-// @access  Private
-export const getMe = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.id);
+    const { token } = req.body;
     
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+
+    const decodedToken = await verifyToken(token);
+    
+    let user = await User.findOne({ uid: decodedToken.uid });
+    
+    if (!user) {
+      user = new User({
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        displayName: decodedToken.name || decodedToken.email.split('@')[0],
+        photoURL: decodedToken.picture || ''
+      });
+      await user.save();
+    }
+
     res.status(200).json({
-      success: true,
-      data: {
-        user
+      message: 'Login successful',
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        role: user.role
       }
     });
   } catch (error) {
-    next(error);
+    res.status(401).json({ message: error.message });
+  }
+};
+
+export const register = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+
+    const decodedToken = await verifyToken(token);
+    
+    const existingUser = await User.findOne({ 
+      $or: [{ uid: decodedToken.uid }, { email: decodedToken.email }] 
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    const user = new User({
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      displayName: decodedToken.name || decodedToken.email.split('@')[0],
+      photoURL: decodedToken.picture || ''
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const verify = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+
+    const decodedToken = await verifyToken(token);
+    const user = await User.findOne({ uid: decodedToken.uid });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      message: 'Token verified',
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(401).json({ message: error.message });
   }
 };
