@@ -3,15 +3,20 @@ import {
   createBooking,
   getBookingsByUser,
   getAllBookings,
-  cancelBooking
+  deleteBooking,
+  getBookingById,
+  updateBooking
 } from '../controllers/bookingController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+// Basic CRUD routes
 router.get('/', authMiddleware, getAllBookings);
 router.get('/user/:userEmail', authMiddleware, getBookingsByUser);
+router.get('/:id', authMiddleware, getBookingById);
 router.post('/', authMiddleware, createBooking);
-router.delete('/:id', authMiddleware, cancelBooking);
+router.put('/:id', authMiddleware, updateBooking);
+router.delete('/:id', authMiddleware, deleteBooking);
 
 export default router;
