@@ -168,15 +168,40 @@ export const createVehicle = async (req, res) => {
  */
 export const updateVehicle = async (req, res) => {
   try {
+    console.log('🔄 Update Vehicle Request:', {
+      vehicleId: req.params.id,
+      authenticatedUser: req.user ? req.user.email : 'No user',
+      userData: req.user
+    });
+
+    // Check if user is authenticated
+    if (!req.user || !req.user.email) {
+      console.log('❌ No authenticated user found');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const vehicle = await Vehicle.findById(req.params.id);
     
     if (!vehicle) {
+      console.log('❌ Vehicle not found with ID:', req.params.id);
       return res.status(404).json({ message: 'Vehicle not found' });
     }
+
+    console.log('📋 Vehicle found:', {
+      vehicleId: vehicle._id,
+      vehicleOwner: vehicle.userEmail,
+      authenticatedUser: req.user.email,
+      isOwner: vehicle.userEmail === req.user.email
+    });
     
     // Authorization Check: Only the owner (based on userEmail) can update the vehicle.
     if (vehicle.userEmail !== req.user.email) {
-      return res.status(403).json({ message: 'Not authorized to update this vehicle' });
+      console.log('🚫 Authorization failed:', {
+        vehicleOwner: vehicle.userEmail,
+        authenticatedUser: req.user.email,
+        match: vehicle.userEmail === req.user.email
+      });
+      return res.status(403).json({ message: 'Not authorized to update this vehicle. You can only update your own vehicles.' });
     }
     
     // Prevents accidental overwrite of owner email on update payload
@@ -187,13 +212,24 @@ export const updateVehicle = async (req, res) => {
     const updatedVehicle = await Vehicle.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true, runValidators: true } // { new: true } returns the updated document, { runValidators: true } ensures schema validation runs
+      { new: true, runValidators: true }
     );
+
+    console.log('✅ Vehicle updated successfully:', updatedVehicle._id);
     
     res.status(200).json(updatedVehicle);
   } catch (error) {
-    console.error('Error updating vehicle:', error);
-    res.status(400).json({ message: error.message });
+    console.error('❌ Error updating vehicle:', error);
+    
+    // More specific error handling
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid vehicle ID format' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+    
+    res.status(500).json({ message: 'Server error during vehicle update' });
   }
 };
 
@@ -204,6 +240,16 @@ export const updateVehicle = async (req, res) => {
  */
 export const deleteVehicle = async (req, res) => {
   try {
+    console.log('🗑️ Delete Vehicle Request:', {
+      vehicleId: req.params.id,
+      authenticatedUser: req.user ? req.user.email : 'No user'
+    });
+
+    // Check if user is authenticated
+    if (!req.user || !req.user.email) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const vehicle = await Vehicle.findById(req.params.id);
     
     if (!vehicle) {
@@ -212,6 +258,10 @@ export const deleteVehicle = async (req, res) => {
     
     // Authorization Check: Only the owner (based on userEmail) can delete the vehicle.
     if (vehicle.userEmail !== req.user.email) {
+      console.log('🚫 Delete authorization failed:', {
+        vehicleOwner: vehicle.userEmail,
+        authenticatedUser: req.user.email
+      });
       return res.status(403).json({ message: 'Not authorized to delete this vehicle' });
     }
     
