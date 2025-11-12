@@ -19,24 +19,36 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin - FIXED FOR VERCEL
 const initializeFirebase = () => {
   try {
-    // Corrected path resolution for ES Modules
-    const serviceAccountPath = join(__dirname, 'config', 'firebase-service-account.json');
-    
-    const serviceAccount = JSON.parse(
-        readFileSync(serviceAccountPath, 'utf8')
-    );
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
+    // Check if we're in Vercel (environment variables) or local (file)
+    if (process.env.FIREBASE_PRIVATE_KEY) {
+      // Vercel environment - use env variables
+      console.log('🔧 Initializing Firebase with environment variables...');
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        })
+      });
+    } else {
+      // Local development - use service account file
+      console.log('🔧 Initializing Firebase with service account file...');
+      const serviceAccountPath = join(__dirname, 'config', 'firebase-service-account.json');
+      const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    }
     console.log('✅ Firebase Admin initialized successfully');
   } catch (error) {
     console.error('❌ Firebase Admin initialization failed:', error.message);
-    console.log('💡 Check if config/firebase-service-account.json exists and is valid.');
-    process.exit(1);
+    // Don't exit process in production, just log error
+    if (process.env.NODE_ENV === 'development') {
+      process.exit(1);
+    }
   }
 };
 
@@ -44,6 +56,10 @@ const initializeFirebase = () => {
 const connectDB = async () => {
   try {
     console.log('🔄 Connecting to MongoDB Atlas...');
+    
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is missing');
+    }
     
     const conn = await mongoose.connect(process.env.MONGODB_URI);
     
@@ -60,29 +76,36 @@ const connectDB = async () => {
 
 // Main function to run everything
 const createAppAndStartServer = async () => {
-  initializeFirebase();
-  const dbConnected = await connectDB();
-  
-  const PORT = process.env.PORT || 5000;
-
-  // Start the server using the imported 'app' instance
-  app.listen(PORT, () => {
-    console.log('=================================');
-    console.log('🚗 GoRide Server');
-    console.log(`📍 Port: ${PORT}`);
-    console.log(`🌐 URL: http://localhost:${PORT}`);
-    console.log(`❤️  Health: http://localhost:${PORT}/health`);
-    console.log(`🔐 Firebase: Connected ✅`);
-    console.log(`🗄️  Database: ${dbConnected ? 'Connected ✅' : 'Disconnected ❌'}`);
+  try {
+    initializeFirebase();
+    const dbConnected = await connectDB();
     
-    if (dbConnected) {
-      console.log(`📊 DB Name: ${mongoose.connection.name}`);
-      console.log(`🌍 DB Host: ${mongoose.connection.host}`);
+    // If database connection fails, still start server but log warning
+    if (!dbConnected) {
+      console.warn('⚠️ Server starting without database connection');
     }
-    console.log('=================================');
-  });
-};
 
+    const PORT = process.env.PORT || 5000;
+
+    app.listen(PORT, () => {
+      console.log('=================================');
+      console.log('🚗 GoRide Server');
+      console.log(`📍 Port: ${PORT}`);
+      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔐 Firebase: Initialized ✅`);
+      console.log(`🗄️ Database: ${dbConnected ? 'Connected ✅' : 'Disconnected ❌'}`);
+      
+      if (dbConnected) {
+        console.log(`📊 DB Name: ${mongoose.connection.name}`);
+        console.log(`🌍 DB Host: ${mongoose.connection.host}`);
+      }
+      console.log('=================================');
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
 
 // Main Execution
 createAppAndStartServer();

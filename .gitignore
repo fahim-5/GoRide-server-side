@@ -60,3 +60,14 @@ coverage/
 .env
 config/firebase-service-account.json
 node_modules/
+
+
+
+
+
+node_modules/
+.env
+config/firebase-service-account.json
+.DS_Store
+npm-debug.log*
+uploads/
