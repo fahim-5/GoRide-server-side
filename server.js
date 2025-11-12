@@ -7,10 +7,8 @@ import mongoose from 'mongoose';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import dotenv from 'dotenv';
-// Standard imports for ES Module path resolution
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-// Import the application entry point
 import app from './app.js'; 
 
 dotenv.config();
@@ -19,12 +17,10 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Initialize Firebase Admin - FIXED FOR VERCEL
+// Initialize Firebase Admin
 const initializeFirebase = () => {
   try {
-    // Check if we're in Vercel (environment variables) or local (file)
     if (process.env.FIREBASE_PRIVATE_KEY) {
-      // Vercel environment - use env variables
       console.log('🔧 Initializing Firebase with environment variables...');
       admin.initializeApp({
         credential: admin.credential.cert({
@@ -34,7 +30,6 @@ const initializeFirebase = () => {
         })
       });
     } else {
-      // Local development - use service account file
       console.log('🔧 Initializing Firebase with service account file...');
       const serviceAccountPath = join(__dirname, 'config', 'firebase-service-account.json');
       const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
@@ -45,7 +40,6 @@ const initializeFirebase = () => {
     console.log('✅ Firebase Admin initialized successfully');
   } catch (error) {
     console.error('❌ Firebase Admin initialization failed:', error.message);
-    // Don't exit process in production, just log error
     if (process.env.NODE_ENV === 'development') {
       process.exit(1);
     }
@@ -80,7 +74,6 @@ const createAppAndStartServer = async () => {
     initializeFirebase();
     const dbConnected = await connectDB();
     
-    // If database connection fails, still start server but log warning
     if (!dbConnected) {
       console.warn('⚠️ Server starting without database connection');
     }
@@ -92,6 +85,7 @@ const createAppAndStartServer = async () => {
       console.log('🚗 GoRide Server');
       console.log(`📍 Port: ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 Server URL: https://go-ride-server-side.vercel.app`);
       console.log(`🔐 Firebase: Initialized ✅`);
       console.log(`🗄️ Database: ${dbConnected ? 'Connected ✅' : 'Disconnected ❌'}`);
       
@@ -107,5 +101,5 @@ const createAppAndStartServer = async () => {
   }
 };
 
-// Main Execution
+// Start the server
 createAppAndStartServer();
