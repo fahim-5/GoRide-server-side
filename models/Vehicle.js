@@ -11,12 +11,10 @@ const vehicleSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  // Consolidated category field based on requirements
   category: {
     type: String,
     required: true,
-    // Using the categories specified in the requirement document
-    enum: ['Sedan', 'SUV', 'Electric', 'Van'], //
+    enum: ['Sedan', 'SUV', 'Electric', 'Van'], 
   },
   pricePerDay: {
     type: Number,
@@ -31,7 +29,7 @@ const vehicleSchema = new mongoose.Schema({
   availability: {
     type: String,
     required: true,
-    enum: ['Available', 'Booked'], //
+    enum: ['Available', 'Booked'], 
     default: 'Available'
   },
   description: {
@@ -47,7 +45,6 @@ const vehicleSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  // REMOVED: Redundant 'categories' field as it duplicates 'category'
 }, {
   timestamps: true
 });

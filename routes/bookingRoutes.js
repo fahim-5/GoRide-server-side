@@ -11,7 +11,6 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Basic CRUD routes
 router.get('/', authMiddleware, getAllBookings);
 router.get('/user/:userEmail', authMiddleware, getBookingsByUser);
 router.get('/:id', authMiddleware, getBookingById);

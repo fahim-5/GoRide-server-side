@@ -13,11 +13,9 @@ import app from './app.js';
 
 dotenv.config();
 
-// Define __dirname equivalent for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Initialize Firebase Admin
 const initializeFirebase = () => {
   try {
     if (process.env.FIREBASE_PRIVATE_KEY) {
@@ -46,7 +44,6 @@ const initializeFirebase = () => {
   }
 };
 
-// Connect to MongoDB Atlas
 const connectDB = async () => {
   try {
     console.log('🔄 Connecting to MongoDB Atlas...');
@@ -68,7 +65,6 @@ const connectDB = async () => {
   }
 };
 
-// Main function to run everything
 const createAppAndStartServer = async () => {
   try {
     initializeFirebase();
@@ -101,5 +97,4 @@ const createAppAndStartServer = async () => {
   }
 };
 
-// Start the server
 createAppAndStartServer();

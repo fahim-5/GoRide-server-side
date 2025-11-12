@@ -68,7 +68,7 @@ const newVehicles = [
   {
     vehicleName: "Chevrolet Camaro",
     owner: "Sophia Turner",
-    category: "Sedan", // changed from Sports
+    category: "Sedan", 
     pricePerDay: 200,
     location: "Dhaka, Bashundhara",
     availability: "Available",
@@ -80,7 +80,7 @@ const newVehicles = [
   {
     vehicleName: "Toyota Corolla Cross",
     owner: "Ismail Rahman",
-    category: "SUV", // changed from Crossover
+    category: "SUV", 
     pricePerDay: 85,
     location: "Khulna, Khalishpur",
     availability: "Available",
@@ -92,7 +92,7 @@ const newVehicles = [
   {
     vehicleName: "Range Rover Evoque",
     owner: "Lucas Green",
-    category: "SUV", // changed from Luxury SUV
+    category: "SUV", 
     pricePerDay: 190,
     location: "Dhaka, Baridhara",
     availability: "Available",
@@ -104,7 +104,7 @@ const newVehicles = [
   {
     vehicleName: "Volkswagen Golf",
     owner: "Emma Wilson",
-    category: "Sedan", // changed from Hatchback
+    category: "Sedan", 
     pricePerDay: 65,
     location: "Chittagong, GEC Circle",
     availability: "Available",
@@ -116,7 +116,7 @@ const newVehicles = [
   {
     vehicleName: "Lexus RX 350",
     owner: "Ariana Blake",
-    category: "SUV", // changed from Luxury SUV
+    category: "SUV", 
     pricePerDay: 175,
     location: "Sylhet, Ambarkhana",
     availability: "Available",
