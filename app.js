@@ -9,25 +9,36 @@ import routes from './routes/index.js';
 
 const app = express();
 
-// Enhanced CORS configuration for your frontend
+// Enhanced CORS configuration for ALL your frontend domains
 app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:5173',
     'https://go-ride-server-side.vercel.app',
-    // Add your frontend domains here when deployed
+    'https://goride-by-fahim.netlify.app', // YOUR NETLIFY DOMAIN
+    'https://*.netlify.app' // All Netlify subdomains
   ],
   credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Length', 'X-Total-Count']
 }));
 
-app.use(helmet());
+// Security middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// Rate limiting
 app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again later.'
+  }
 }));
 
+// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -48,6 +59,15 @@ app.get('/health', (req, res) => {
     services: {
       database: dbState === 1 ? 'operational' : 'down',
       firebase: 'operational'
+    },
+    cors: {
+      allowedOrigins: [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://go-ride-server-side.vercel.app',
+        'https://goride-by-fahim.netlify.app',
+        'https://*.netlify.app'
+      ]
     }
   });
 });
@@ -59,7 +79,17 @@ app.get('/', (req, res) => {
     status: 'running',
     timestamp: new Date().toISOString(),
     documentation: '/api',
-    health: '/health'
+    health: '/health',
+    version: '1.0.0'
+  });
+});
+
+// Test CORS route
+app.get('/test-cors', (req, res) => {
+  res.json({
+    message: 'CORS is working!',
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
   });
 });
 
